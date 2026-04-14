@@ -50,7 +50,7 @@ func NewDefault(inv InvocationContext) *Factory {
 	f.FileIOProvider = fileio.GetProvider()
 
 	// Phase 1: HttpClient (no credential dependency)
-	f.HttpClient = cachedHttpClientFunc()
+	f.HttpClient = cachedHttpClientFunc(inv.Debug, f.IOStreams.ErrOut)
 
 	// Phase 2: Credential (sole data source)
 	f.Credential = buildCredentialProvider(credentialDeps{
@@ -93,7 +93,7 @@ func safeRedirectPolicy(req *http.Request, via []*http.Request) error {
 	return nil
 }
 
-func cachedHttpClientFunc() func() (*http.Client, error) {
+func cachedHttpClientFunc(debug bool, errOut io.Writer) func() (*http.Client, error) {
 	return sync.OnceValues(func() (*http.Client, error) {
 		util.WarnIfProxied(os.Stderr)
 
@@ -102,6 +102,12 @@ func cachedHttpClientFunc() func() (*http.Client, error) {
 		transport = &SecurityHeaderTransport{Base: transport}
 		transport = &auth.SecurityPolicyTransport{Base: transport} // Add our global response interceptor
 		transport = wrapWithExtension(transport)
+
+		// Wrap with debug transport if debug mode is enabled
+		if debug {
+			transport = &DebugTransport{Base: transport, Out: errOut}
+		}
+
 		client := &http.Client{
 			Transport:     transport,
 			Timeout:       30 * time.Second,
@@ -124,7 +130,7 @@ func cachedLarkClientFunc(f *Factory) func() (*lark.Client, error) {
 		}
 		util.WarnIfProxied(os.Stderr)
 		opts = append(opts, lark.WithHttpClient(&http.Client{
-			Transport:     buildSDKTransport(),
+			Transport:     buildSDKTransport(f.Invocation.Debug, f.IOStreams.ErrOut),
 			CheckRedirect: safeRedirectPolicy,
 		}))
 		ep := core.ResolveEndpoints(acct.Brand)
@@ -133,12 +139,19 @@ func cachedLarkClientFunc(f *Factory) func() (*lark.Client, error) {
 	})
 }
 
-func buildSDKTransport() http.RoundTripper {
+func buildSDKTransport(debug bool, errOut io.Writer) http.RoundTripper {
 	var sdkTransport http.RoundTripper = util.NewBaseTransport()
 	sdkTransport = &RetryTransport{Base: sdkTransport}
 	sdkTransport = &UserAgentTransport{Base: sdkTransport}
 	sdkTransport = &auth.SecurityPolicyTransport{Base: sdkTransport}
-	return wrapWithExtension(sdkTransport)
+	sdkTransport = wrapWithExtension(sdkTransport)
+
+	// Wrap with debug transport if debug mode is enabled
+	if debug {
+		sdkTransport = &DebugTransport{Base: sdkTransport, Out: errOut}
+	}
+
+	return sdkTransport
 }
 
 type credentialDeps struct {
