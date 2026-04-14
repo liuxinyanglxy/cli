@@ -97,7 +97,7 @@ func Execute() int {
 	}
 	f := cmdutil.NewDefault(inv)
 
-	globals := &GlobalOptions{Profile: inv.Profile}
+	globals := &GlobalOptions{Profile: inv.Profile, Debug: inv.Debug}
 	rootCmd := &cobra.Command{
 		Use:     "lark-cli",
 		Short:   "Lark/Feishu CLI — OAuth authorization, UAT management, API calls",
@@ -211,11 +211,23 @@ func handleRootError(f *cmdutil.Factory, err error) int {
 			enrichPermissionError(f, exitErr)
 		}
 		output.WriteErrorEnvelope(errOut, exitErr, string(f.ResolvedIdentity))
+
+		// Log stack trace in debug mode
+		if f.Invocation.Debug {
+			output.WriteDebugStackTrace(errOut, err)
+		}
+
 		return exitErr.Code
 	}
 
 	// Cobra errors (required flags, unknown commands, etc.)
 	fmt.Fprintln(errOut, "Error:", err)
+
+	// Log stack trace in debug mode
+	if f.Invocation.Debug {
+		output.WriteDebugStackTrace(errOut, err)
+	}
+
 	return 1
 }
 

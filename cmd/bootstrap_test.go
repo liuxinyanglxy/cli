@@ -70,3 +70,23 @@ func TestBootstrapInvocationContext_HelpWithProfile(t *testing.T) {
 		t.Fatalf("profile = %q, want %q", inv.Profile, "target")
 	}
 }
+
+func TestBootstrapInvocationContext_DebugFlag(t *testing.T) {
+	inv, err := BootstrapInvocationContext([]string{"--debug", "auth", "status"})
+	if err != nil {
+		t.Fatalf("BootstrapInvocationContext() error = %v", err)
+	}
+	if !inv.Debug {
+		t.Fatalf("BootstrapInvocationContext() debug = false, want true")
+	}
+}
+
+func TestBootstrapInvocationContext_DebugFlagFalse(t *testing.T) {
+	inv, err := BootstrapInvocationContext([]string{"auth", "status"})
+	if err != nil {
+		t.Fatalf("BootstrapInvocationContext() error = %v", err)
+	}
+	if inv.Debug {
+		t.Fatalf("BootstrapInvocationContext() debug = true, want false")
+	}
+}
