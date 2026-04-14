@@ -27,7 +27,6 @@ import (
 // In tests, replace any field to stub out external dependencies.
 type InvocationContext struct {
 	Profile string
-	Debug   bool
 }
 
 type Factory struct {

@@ -6,7 +6,6 @@ package cmdutil
 import (
 	"context"
 	"errors"
-	"io"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -122,7 +121,7 @@ func TestNewDefault_InvocationProfileMissingSticksAcrossEarlyStrictMode(t *testi
 }
 
 func TestBuildSDKTransport_IncludesRetryTransport(t *testing.T) {
-	transport := buildSDKTransport(false, io.Discard)
+	transport := buildSDKTransport()
 
 	sec, ok := transport.(*internalauth.SecurityPolicyTransport)
 	if !ok {
@@ -363,7 +362,7 @@ func TestBuildSDKTransport_WithExtension(t *testing.T) {
 	exttransport.Register(&stubTransportProvider{})
 	t.Cleanup(func() { exttransport.Register(nil) })
 
-	transport := buildSDKTransport(false, io.Discard)
+	transport := buildSDKTransport()
 
 	// Chain: extensionMiddleware → SecurityPolicy → UserAgent → Retry → Base
 	mid, ok := transport.(*extensionMiddleware)
@@ -386,7 +385,7 @@ func TestBuildSDKTransport_WithExtension(t *testing.T) {
 func TestBuildSDKTransport_WithoutExtension(t *testing.T) {
 	exttransport.Register(nil)
 
-	transport := buildSDKTransport(false, io.Discard)
+	transport := buildSDKTransport()
 
 	sec, ok := transport.(*internalauth.SecurityPolicyTransport)
 	if !ok {
